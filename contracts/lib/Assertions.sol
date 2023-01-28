@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.13;
 
 import { OrderParameters } from "./ConsiderationStructs.sol";
 
@@ -11,35 +11,14 @@ import {
 
 import { CounterManager } from "./CounterManager.sol";
 
-import {
-    AdditionalRecipient_size_shift,
-    BasicOrder_additionalRecipients_head_cdPtr,
-    BasicOrder_additionalRecipients_head_ptr,
-    BasicOrder_additionalRecipients_length_cdPtr,
-    BasicOrder_basicOrderType_cdPtr,
-    BasicOrder_basicOrderType_range,
-    BasicOrder_parameters_cdPtr,
-    BasicOrder_parameters_ptr,
-    BasicOrder_signature_cdPtr,
-    BasicOrder_signature_ptr
-} from "./ConsiderationConstants.sol";
-
-import {
-    Error_selector_offset,
-    MissingItemAmount_error_length,
-    MissingItemAmount_error_selector
-} from "./ConsiderationErrorConstants.sol";
-
-import {
-    _revertInvalidBasicOrderParameterEncoding,
-    _revertMissingOriginalConsiderationItems
-} from "./ConsiderationErrors.sol";
+import "./ConsiderationConstants.sol";
 
 /**
  * @title Assertions
  * @author 0age
  * @notice Assertions contains logic for making various assertions that do not
  *         fit neatly within a dedicated semantic scope.
+一些 对于字段的assert判断方法
  */
 contract Assertions is
     GettersAndDerivers,
@@ -54,9 +33,9 @@ contract Assertions is
      *                          that may optionally be used to transfer approved
      *                          ERC20/721/1155 tokens.
      */
-    constructor(
-        address conduitController
-    ) GettersAndDerivers(conduitController) {}
+    constructor(address conduitController)
+        GettersAndDerivers(conduitController)
+    {}
 
     /**
      * @dev Internal view function to ensure that the supplied consideration
@@ -102,7 +81,7 @@ contract Assertions is
     ) internal pure {
         // Ensure supplied consideration array length is not less than original.
         if (suppliedConsiderationItemTotal < originalConsiderationItemTotal) {
-            _revertMissingOriginalConsiderationItems();
+            revert MissingOriginalConsiderationItems();
         }
     }
 
@@ -113,14 +92,9 @@ contract Assertions is
      * @param amount The amount to check.
      */
     function _assertNonZeroAmount(uint256 amount) internal pure {
-        assembly {
-            if iszero(amount) {
-                // Store left-padded selector with push4, mem[28:32] = selector
-                mstore(0, MissingItemAmount_error_selector)
-
-                // revert(abi.encodeWithSignature("MissingItemAmount()"))
-                revert(Error_selector_offset, MissingItemAmount_error_length)
-            }
+        // Revert if the supplied amount is equal to zero.
+        if (amount == 0) {
+            revert MissingItemAmount();
         }
     }
 
@@ -131,7 +105,7 @@ contract Assertions is
      *      same data as the assembly functions and that values that are bound
      *      to a given range are within that range. Note that no parameters are
      *      supplied as all basic order functions use the same calldata
-     *      encoding.
+     *      encoding. 该方法只是简单校验了一下BasicOrderParameters 结构体类型的入参的其中几个字段的位置是否正确等，数据内容未校验
      */
     function _assertValidBasicOrderParameters() internal pure {
         // Declare a boolean designating basic order parameter offset validity.
@@ -153,6 +127,7 @@ contract Assertions is
                     BasicOrder_parameters_ptr
                 ),
                 // Additional recipients at cd 0x224 must have offset of 0x240.
+                // 0x240的由来：数组实际的长度+各个元素是从内存中的0x264开始，0x224中存储的是从函数选择器之后开始计数的字节（0x24）的偏移量，因此0x264-0x24=0x240
                 eq(
                     calldataload(BasicOrder_additionalRecipients_head_cdPtr),
                     BasicOrder_additionalRecipients_head_ptr
@@ -167,13 +142,13 @@ contract Assertions is
                     // Derive expected offset as start of recipients + len * 64.
                     add(
                         BasicOrder_signature_ptr,
-                        shl(
-                            // Each additional recipient has a length of 0x40.
-                            AdditionalRecipient_size_shift,
+                        mul(
                             // Additional recipients length at calldata 0x264.
                             calldataload(
                                 BasicOrder_additionalRecipients_length_cdPtr
-                            )
+                            ),
+                            // Each additional recipient has a length of 0x40.
+                            AdditionalRecipients_size
                         )
                     )
                 )
@@ -192,7 +167,7 @@ contract Assertions is
 
         // Revert with an error if basic order parameter offsets are invalid.
         if (!validOffsets) {
-            _revertInvalidBasicOrderParameterEncoding();
+            revert InvalidBasicOrderParameterEncoding();
         }
     }
 }
