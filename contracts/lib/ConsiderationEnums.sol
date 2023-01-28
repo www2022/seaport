@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.7;
 
+// prettier-ignore
 enum OrderType {
     // 0: no partial fills, anyone can execute
     FULL_OPEN,
@@ -12,14 +13,12 @@ enum OrderType {
     FULL_RESTRICTED,
 
     // 3: partial fills supported, only offerer or zone can execute
-    PARTIAL_RESTRICTED,
-
-    // 4: contract order type
-    CONTRACT
+    PARTIAL_RESTRICTED
 }
 
+// prettier-ignore
 enum BasicOrderType {
-    // 0: no partial fills, anyone can execute
+    // 0: no partial fills, anyone can execute  接单者用主网币ETH换取ERC721
     ETH_TO_ERC721_FULL_OPEN,
 
     // 1: partial fills supported, anyone can execute
@@ -92,8 +91,9 @@ enum BasicOrderType {
     ERC1155_TO_ERC20_PARTIAL_RESTRICTED
 }
 
-enum BasicOrderRouteType {
-    // 0: provide Ether (or other native token) to receive offered ERC721 item.
+// prettier-ignore
+enum BasicOrderRouteType {//交换路径类型：表示 接单者支付什么类型的代币 换取 什么类型的代币
+    // 0: provide Ether (or other native token) to receive offered ERC721 item. 接单者转出ETH,最后接收到ERC721
     ETH_TO_ERC721,
 
     // 1: provide Ether (or other native token) to receive offered ERC1155 item.
@@ -112,6 +112,7 @@ enum BasicOrderRouteType {
     ERC1155_TO_ERC20
 }
 
+// prettier-ignore
 enum ItemType {
     // 0: ETH on mainnet, MATIC on polygon, etc.
     NATIVE,
@@ -132,6 +133,7 @@ enum ItemType {
     ERC1155_WITH_CRITERIA
 }
 
+// prettier-ignore
 enum Side {
     // 0: Items that can be spent
     OFFER,
