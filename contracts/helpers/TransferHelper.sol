@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.7;
 
 import { IERC721Receiver } from "../interfaces/IERC721Receiver.sol";
 
-import {
-    TransferHelperItem,
-    TransferHelperItemsWithRecipient
-} from "./TransferHelperStructs.sol";
-
-import { ConduitItemType } from "../conduit/lib/ConduitEnums.sol";
+import "./TransferHelperStructs.sol";
 
 import { ConduitInterface } from "../interfaces/ConduitInterface.sol";
 
 import {
     ConduitControllerInterface
 } from "../interfaces/ConduitControllerInterface.sol";
+
+import { Conduit } from "../conduit/Conduit.sol";
 
 import { ConduitTransfer } from "../conduit/lib/ConduitStructs.sol";
 
@@ -29,6 +26,7 @@ import { TransferHelperErrors } from "../interfaces/TransferHelperErrors.sol";
  * @author stephankmin, stuckinaboot, ryanio
  * @notice TransferHelper is a utility contract for transferring
  *         ERC20/ERC721/ERC1155 items in bulk to specific recipients.
+ * 该合约 通过调用Conduit合约中的execute() 进行各种token的 transfer
  */
 contract TransferHelper is TransferHelperInterface, TransferHelperErrors {
     // Allow for interaction with the conduit controller.
@@ -65,7 +63,7 @@ contract TransferHelper is TransferHelperInterface, TransferHelperErrors {
      *         specified recipients.
      *
      * @param items      The items to transfer to an intended recipient.
-     * @param conduitKey A mandatory conduit key referring to a conduit through
+     * @param conduitKey An optional conduit key referring to a conduit through
      *                   which the bulk transfer should occur.
      *
      * @return magicValue A value indicating that the transfers were successful.
@@ -252,19 +250,12 @@ contract TransferHelper is TransferHelperInterface, TransferHelperErrors {
             // the correct length and matches an expected custom error selector.
             if (
                 data.length == 4 &&
-                customErrorSelector == InvalidItemType.selector
+                (customErrorSelector == InvalidItemType.selector ||
+                    customErrorSelector == InvalidERC721TransferAmount.selector)
             ) {
                 // "Bubble up" the revert reason.
                 assembly {
                     revert(add(data, 0x20), 0x04)
-                }
-            } else if (
-                data.length == 36 &&
-                customErrorSelector == InvalidERC721TransferAmount.selector
-            ) {
-                // "Bubble up" the revert reason.
-                assembly {
-                    revert(add(data, 0x20), 0x24)
                 }
             }
 
@@ -305,7 +296,7 @@ contract TransferHelper is TransferHelperInterface, TransferHelperErrors {
             )
         returns (bytes4 selector) {
             // Check if onERC721Received selector is valid.
-            if (selector != IERC721Receiver.onERC721Received.selector) {
+            if (selector != IERC721Receiver. .selector) {
                 // Revert if recipient cannot accept
                 // ERC721 tokens.
                 revert InvalidERC721Recipient(recipient);
