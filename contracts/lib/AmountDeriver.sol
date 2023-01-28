@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.13;
 
 import {
     AmountDerivationErrors
 } from "../interfaces/AmountDerivationErrors.sol";
 
-import {
-    Error_selector_offset,
-    InexactFraction_error_length,
-    InexactFraction_error_selector
-} from "./ConsiderationErrorConstants.sol";
+import "./ConsiderationConstants.sol";
 
 /**
  * @title AmountDeriver
@@ -38,6 +34,8 @@ contract AmountDeriver is AmountDerivationErrors {
      *                    should be rounded up or down.
      *
      * @return amount The current amount.
+
+     // 作用：利用“线性插值法”计算 当前时刻对应的amount值。相当于在由两点(startTime, startAmount)和(endTime,endAmount)确定的直线上求某一个点的坐标
      */
     function _locateCurrentAmount(
         uint256 startAmount,
@@ -62,20 +60,19 @@ contract AmountDeriver is AmountDerivationErrors {
                 elapsed = block.timestamp - startTime;
 
                 // Derive time remaining until order expires and place on stack.
-                remaining = duration - elapsed;
+                remaining = duration - elapsed; //endTime-block.timestamp
             }
 
             // Aggregate new amounts weighted by time with rounding factor.
             uint256 totalBeforeDivision = ((startAmount * remaining) +
-                (endAmount * elapsed));
-
+                (endAmount * elapsed)); // 插值法公式：Y=Y1+(Y2-Y1)×(X-X1)/(X2-X1) = (x2*y1- x1*y1+x*y2-x*y1-x1*y2+x1*y1)/(X2-X1)= (y1*(x2-x)+y2*(x-x1))/(X2-X1)
             // Use assembly to combine operations and skip divide-by-zero check.
             assembly {
                 // Multiply by iszero(iszero(totalBeforeDivision)) to ensure
                 // amount is set to zero if totalBeforeDivision is zero,
                 // as intermediate overflow can occur if it is zero.
                 amount := mul(
-                    iszero(iszero(totalBeforeDivision)),
+                    iszero(iszero(totalBeforeDivision)), // 如果totalBeforeDivision=0，下方的sub就会溢出，所以此处要多加一个乘数、0的话mul就直接结束了
                     // Subtract 1 from the numerator and add 1 to the result if
                     // roundUp is true to get the proper rounding direction.
                     // Division is performed with no zero check as duration
@@ -109,6 +106,8 @@ contract AmountDeriver is AmountDerivationErrors {
      * @param value       The value for which to compute the fraction.
      *
      * @return newValue The value after applying the fraction.
+
+     作用：计算并返回 value*numerator/denominator，如果不能整除、有余数，则revert
      */
     function _getFraction(
         uint256 numerator,
@@ -126,11 +125,9 @@ contract AmountDeriver is AmountDerivationErrors {
             // Ensure new value contains no remainder via mulmod operator.
             // Credit to @hrkrshnn + @axic for proposing this optimal solution.
             if mulmod(value, numerator, denominator) {
-                // Store left-padded selector with push4, mem[28:32] = selector
-                mstore(0, InexactFraction_error_selector)
-
-                // revert(abi.encodeWithSignature("InexactFraction()"))
-                revert(Error_selector_offset, InexactFraction_error_length)
+                // 如果有余数，则revert
+                mstore(0, InexactFraction_error_signature)
+                revert(0, InexactFraction_error_len)
             }
         }
 
@@ -159,6 +156,7 @@ contract AmountDeriver is AmountDerivationErrors {
      *                        amount should be rounded up or down.
      *
      * @return amount The received item to transfer with the final amount.
+     // 根据分子、分母等，计算出本次交易的数量amount
      */
     function _applyFraction(
         uint256 startAmount,
