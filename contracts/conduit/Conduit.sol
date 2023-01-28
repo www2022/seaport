@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.7;
 
 import { ConduitInterface } from "../interfaces/ConduitInterface.sol";
 
@@ -8,19 +8,11 @@ import { ConduitItemType } from "./lib/ConduitEnums.sol";
 import { TokenTransferrer } from "../lib/TokenTransferrer.sol";
 
 import {
-    ConduitBatch1155Transfer,
-    ConduitTransfer
+    ConduitTransfer,
+    ConduitBatch1155Transfer
 } from "./lib/ConduitStructs.sol";
 
-import {
-    ChannelClosed_channel_ptr,
-    ChannelClosed_error_length,
-    ChannelClosed_error_ptr,
-    ChannelClosed_error_signature,
-    ChannelKey_channel_ptr,
-    ChannelKey_length,
-    ChannelKey_slot_ptr
-} from "./lib/ConduitConstants.sol";
+import "./lib/ConduitConstants.sol";
 
 /**
  * @title Conduit
@@ -56,6 +48,7 @@ contract Conduit is ConduitInterface, TokenTransferrer {
 
             // Derive the position in storage of _channels[msg.sender]
             // and check if the stored value is zero.
+            // 推导出 _channels[msg.sender] 的存储位置，并检查是否是 0， 如果是 0 则表示 channel 不是打开的，报 ChannelClosed 的错误
             if iszero(
                 sload(keccak256(ChannelKey_channel_ptr, ChannelKey_length))
             ) {
@@ -66,11 +59,7 @@ contract Conduit is ConduitInterface, TokenTransferrer {
                 // Next, set the caller as the argument.
                 mstore(ChannelClosed_channel_ptr, caller())
 
-                // Finally, revert, returning full custom error with argument
-                // data in memory.
-                // revert(abi.encodeWithSignature(
-                //     "ChannelClosed(address)", caller()
-                // ))
+                // Finally, revert, returning full custom error with argument.
                 revert(ChannelClosed_error_ptr, ChannelClosed_error_length)
             }
         }
@@ -101,9 +90,12 @@ contract Conduit is ConduitInterface, TokenTransferrer {
      * @return magicValue A magic value indicating that the transfers were
      *                    performed successfully.
      */
-    function execute(
-        ConduitTransfer[] calldata transfers
-    ) external override onlyOpenChannel returns (bytes4 magicValue) {
+    function execute(ConduitTransfer[] calldata transfers)
+        external
+        override
+        onlyOpenChannel
+        returns (bytes4 magicValue)
+    {
         // Retrieve the total number of transfers and place on the stack.
         uint256 totalStandardTransfers = transfers.length;
 
@@ -192,7 +184,7 @@ contract Conduit is ConduitInterface, TokenTransferrer {
 
     /**
      * @notice Open or close a given channel. Only callable by the controller.
-     *
+     * 只能通过ConduitController来调用此update方法
      * @param channel The channel to open or close.
      * @param isOpen  The status of the channel (either open or closed).
      */
@@ -232,7 +224,7 @@ contract Conduit is ConduitInterface, TokenTransferrer {
         } else if (item.itemType == ConduitItemType.ERC721) {
             // Ensure that exactly one 721 item is being transferred.
             if (item.amount != 1) {
-                revert InvalidERC721TransferAmount(item.amount);
+                revert InvalidERC721TransferAmount();
             }
 
             // Transfer ERC721 token.
