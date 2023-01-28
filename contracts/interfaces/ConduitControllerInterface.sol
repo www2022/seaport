@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.7;
 
 /**
  * @title ConduitControllerInterface
@@ -15,8 +15,8 @@ interface ConduitControllerInterface {
     struct ConduitProperties {
         bytes32 key;
         address owner;
-        address potentialOwner;
-        address[] channels;
+        address potentialOwner; // 备选owner。当owner转移权限时、会转为正式的owner，并重新指定一个新的备选owner
+        address[] channels; // channel表示的是哪些用户可以调用此Conduit合约。（作用同Conduit合约中的_channels ）
         mapping(address => uint256) channelIndexesPlusOne;
     }
 
@@ -130,10 +130,9 @@ interface ConduitControllerInterface {
      *
      * @return conduit The address of the newly deployed conduit.
      */
-    function createConduit(
-        bytes32 conduitKey,
-        address initialOwner
-    ) external returns (address conduit);
+    function createConduit(bytes32 conduitKey, address initialOwner)
+        external
+        returns (address conduit);
 
     /**
      * @notice Open or close a channel on a given conduit, thereby allowing the
@@ -162,10 +161,8 @@ interface ConduitControllerInterface {
      * @param conduit The conduit for which to initiate ownership transfer.
      * @param newPotentialOwner The new potential owner of the conduit.
      */
-    function transferOwnership(
-        address conduit,
-        address newPotentialOwner
-    ) external;
+    function transferOwnership(address conduit, address newPotentialOwner)
+        external;
 
     /**
      * @notice Clear the currently set potential owner, if any, from a conduit.
@@ -215,9 +212,10 @@ interface ConduitControllerInterface {
      * @return exists  A boolean indicating whether the derived conduit has been
      *                 deployed or not.
      */
-    function getConduit(
-        bytes32 conduitKey
-    ) external view returns (address conduit, bool exists);
+    function getConduit(bytes32 conduitKey)
+        external
+        view
+        returns (address conduit, bool exists);
 
     /**
      * @notice Retrieve the potential owner, if any, for a given conduit. The
@@ -229,9 +227,10 @@ interface ConduitControllerInterface {
      *
      * @return potentialOwner The potential owner, if any, for the conduit.
      */
-    function getPotentialOwner(
-        address conduit
-    ) external view returns (address potentialOwner);
+    function getPotentialOwner(address conduit)
+        external
+        view
+        returns (address potentialOwner);
 
     /**
      * @notice Retrieve the status (either open or closed) of a given channel on
@@ -242,10 +241,10 @@ interface ConduitControllerInterface {
      *
      * @return isOpen The status of the channel on the given conduit.
      */
-    function getChannelStatus(
-        address conduit,
-        address channel
-    ) external view returns (bool isOpen);
+    function getChannelStatus(address conduit, address channel)
+        external
+        view
+        returns (bool isOpen);
 
     /**
      * @notice Retrieve the total number of open channels for a given conduit.
@@ -254,9 +253,10 @@ interface ConduitControllerInterface {
      *
      * @return totalChannels The total number of open channels for the conduit.
      */
-    function getTotalChannels(
-        address conduit
-    ) external view returns (uint256 totalChannels);
+    function getTotalChannels(address conduit)
+        external
+        view
+        returns (uint256 totalChannels);
 
     /**
      * @notice Retrieve an open channel at a specific index for a given conduit.
@@ -268,10 +268,10 @@ interface ConduitControllerInterface {
      *
      * @return channel The open channel, if any, at the specified channel index.
      */
-    function getChannel(
-        address conduit,
-        uint256 channelIndex
-    ) external view returns (address channel);
+    function getChannel(address conduit, uint256 channelIndex)
+        external
+        view
+        returns (address channel);
 
     /**
      * @notice Retrieve all open channels for a given conduit. Note that calling
@@ -282,9 +282,10 @@ interface ConduitControllerInterface {
      *
      * @return channels An array of open channels on the given conduit.
      */
-    function getChannels(
-        address conduit
-    ) external view returns (address[] memory channels);
+    function getChannels(address conduit)
+        external
+        view
+        returns (address[] memory channels);
 
     /**
      * @dev Retrieve the conduit creation code and runtime code hashes.
