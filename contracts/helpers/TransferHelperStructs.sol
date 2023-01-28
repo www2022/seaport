@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.7;
 
 import { ConduitItemType } from "../conduit/lib/ConduitEnums.sol";
 
@@ -12,7 +12,7 @@ import { ConduitItemType } from "../conduit/lib/ConduitEnums.sol";
 struct TransferHelperItem {
     ConduitItemType itemType;
     address token;
-    uint256 identifier;
+    uint256 identifier; // 对于erc721、1155，identifier为tokenId
     uint256 amount;
 }
 
